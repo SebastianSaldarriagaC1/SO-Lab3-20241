@@ -142,20 +142,31 @@ int main(int argc, char* argv[]){
 }	
 
 void saxpy_setup(double *X, double *Y, double *Y_avgs, double a, int p, int max_iters, int n_threads){
-    pthread_t threads;
-    struct saxpy_args args;
+    pthread_t threads[n_threads];
+    struct saxpy_args args[2];
 
-    args.X = X;
-    args.Y = Y;
-    args.Y_avgs = Y_avgs;
-    args.a = a;
-    args.p = p;
-    args.max_iters = max_iters;
-    args.start_pos = 0;
-    args.end_pos = p;
+    args[0].X = X;
+    args[0].Y = Y;
+    args[0].Y_avgs = Y_avgs;
+    args[0].a = a;
+    args[0].p = p;
+    args[0].max_iters = max_iters;
+    args[0].start_pos = 0;
+    args[0].end_pos = p/2;
 
-    pthread_create(&threads, NULL, saxpy_thread, (void *) &args);
-    pthread_join(threads, NULL);
+	args[1].X = X;
+    args[1].Y = Y;
+    args[1].Y_avgs = Y_avgs;
+    args[1].a = a;
+    args[1].p = p;
+    args[1].max_iters = max_iters;
+    args[1].start_pos = p/2 + 1;
+    args[1].end_pos = p;
+
+    pthread_create(&threads[0], NULL, saxpy_thread, (void *) &args[0]);
+	pthread_create(&threads[1], NULL, saxpy_thread, (void *) &args[1]);
+    pthread_join(threads[0], NULL);
+    pthread_join(threads[1], NULL);
     
 }
 
@@ -175,8 +186,7 @@ void *saxpy_thread(void *arg){
 			Y[i] = Y[i] + a * X[i];
 			Y_avgs[it] += Y[i];
 		}
-		Y_avgs[it] = Y_avgs[it] / p;
+		Y_avgs[it] = Y_avgs[it] / end_pos;
 	}
-
-    printf("Hola desde el hilo");
+	printf("Hola desde el hilo con start=%d y end=%d\n", start_pos, end_pos);
 }
