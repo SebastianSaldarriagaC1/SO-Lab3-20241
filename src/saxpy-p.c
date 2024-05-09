@@ -143,31 +143,40 @@ int main(int argc, char* argv[]){
 
 void saxpy_setup(double *X, double *Y, double *Y_avgs, double a, int p, int max_iters, int n_threads){
     pthread_t threads[n_threads];
-    struct saxpy_args args[2];
+    struct saxpy_args args[n_threads];
 
-    args[0].X = X;
-    args[0].Y = Y;
-    args[0].Y_avgs = Y_avgs;
-    args[0].a = a;
-    args[0].p = p;
-    args[0].max_iters = max_iters;
-    args[0].start_pos = 0;
-    args[0].end_pos = p/2;
+    for (int i = 0; i < n_threads; i++) {
+        args[i].X = X;
+        args[i].Y = Y;
+        args[i].Y_avgs = (double*) malloc(sizeof(double) * max_iters);
+        args[i].a = a;
+        args[i].p = p;
+        args[i].max_iters = max_iters;
+        args[i].start_pos = i * (p / n_threads) + 1;
+        args[i].end_pos = (i + 1) * (p / n_threads);
+        if (i == n_threads - 1) {
+            args[i].end_pos = p;
+        }else if(i == 0){
+			args[i].start_pos = 0;
+		}
 
-	args[1].X = X;
-    args[1].Y = Y;
-    args[1].Y_avgs = Y_avgs;
-    args[1].a = a;
-    args[1].p = p;
-    args[1].max_iters = max_iters;
-    args[1].start_pos = p/2 + 1;
-    args[1].end_pos = p;
+        pthread_create(&threads[i], NULL, saxpy_thread, (void *) &args[i]);
+    }
 
-    pthread_create(&threads[0], NULL, saxpy_thread, (void *) &args[0]);
-	pthread_create(&threads[1], NULL, saxpy_thread, (void *) &args[1]);
-    pthread_join(threads[0], NULL);
-    pthread_join(threads[1], NULL);
-    
+    // Esperar a que todos los hilos terminen
+    for (int i = 0; i < n_threads; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+	double aux;
+
+	for(int it = 0; it < max_iters; it++){
+		aux = 0;
+		for(int i = 0; i < n_threads; i++){
+			aux += args[i].Y_avgs[it];
+		}
+		Y_avgs[it] = aux / p;
+	}
 }
 
 void *saxpy_thread(void *arg){
@@ -186,7 +195,6 @@ void *saxpy_thread(void *arg){
 			Y[i] = Y[i] + a * X[i];
 			Y_avgs[it] += Y[i];
 		}
-		Y_avgs[it] = Y_avgs[it] / end_pos;
 	}
 	printf("Hola desde el hilo con start=%d y end=%d\n", start_pos, end_pos);
 }
