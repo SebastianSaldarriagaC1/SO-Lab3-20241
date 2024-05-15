@@ -24,7 +24,6 @@ struct saxpy_args {
     double *Y;
     double *Y_avgs;
     double a;
-    int p;
     int max_iters;
     int start_pos;
     int end_pos;
@@ -45,7 +44,7 @@ int main(int argc, char* argv[]){
 	double a;
 	double* Y;
 	double* Y_avgs;
-	int i, it;
+	int i;
 	// Variables to get execution time
 	struct timeval t_start, t_end;
 	double exec_time;
@@ -150,7 +149,6 @@ void saxpy_setup(double *X, double *Y, double *Y_avgs, double a, int p, int max_
         args[i].Y = Y;
         args[i].Y_avgs = (double*) malloc(sizeof(double) * max_iters);
         args[i].a = a;
-        args[i].p = p;
         args[i].max_iters = max_iters;
         args[i].start_pos = i * (p / n_threads) + 1;
         args[i].end_pos = (i + 1) * (p / n_threads);
@@ -185,7 +183,6 @@ void *saxpy_thread(void *arg){
     double *Y = args->Y;
     double *Y_avgs = args->Y_avgs;
     double a = args->a;
-    int p = args->p;
     int max_iters = args->max_iters;
     int start_pos = args->start_pos;
     int end_pos = args->end_pos;
@@ -196,5 +193,5 @@ void *saxpy_thread(void *arg){
 			Y_avgs[it] += Y[i];
 		}
 	}
-	printf("Hola desde el hilo con start=%d y end=%d\n", start_pos, end_pos);
+	return arg;
 }
